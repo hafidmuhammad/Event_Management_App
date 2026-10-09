@@ -1,0 +1,20 @@
+import { and, eq, inArray } from "drizzle-orm";
+import { events, participants } from "@/db/schema";
+import { getDb, type Database } from "@/db";
+import { awardItemSchema, awardSchema, type AwardConfigInput } from "@/lib/validation/phase5";
+
+const emptyAwards = { version: 1 as const, items: [] };
+function parseConfig(value: unknown): AwardConfigInput { return awardSchema.parse(value ?? emptyAwards); }
+async function assertParticipantsBelongToEvent(eventId: string, items: AwardConfigInput["items"], database: Database) {
+  const ids = items.flatMap((item) => item.participantId ? [item.participantId] : []);
+  if (!ids.length) return;
+  const rows = await database.select({ id: participants.id }).from(participants).where(and(eq(participants.eventId, eventId), inArray(participants.id, ids)));
+  const valid = new Set(rows.map((row) => row.id));
+  if (ids.some((id) => !valid.has(id))) throw new Error("Award participant must belong to this event.");
+}
+export async function getAwards(eventId: string, database: Database = getDb()) { const [event] = await database.select({ id: events.id, awardJson: events.awardJson }).from(events).where(eq(events.id, eventId)).limit(1); return event ? { ...event, awards: parseConfig(event.awardJson) } : null; }
+export async function saveAwards(eventId: string, input: unknown, database: Database = getDb()) { const parsed = parseConfig(input); await assertParticipantsBelongToEvent(eventId, parsed.items, database); await database.update(events).set({ awardJson: parsed }).where(eq(events.id, eventId)); return parsed; }
+export async function addAward(eventId: string, input: unknown, database: Database = getDb()) { const current = await getAwards(eventId, database); if (!current) return { ok: false as const, code: "EVENT_NOT_FOUND" }; const parsedInput = input as Record<string, unknown>; const item = awardItemSchema.parse({ ...parsedInput, id: crypto.randomUUID(), displayOrder: current.awards.items.length + 1 }); const next = { ...current.awards, items: [...current.awards.items, item] }; await saveAwards(eventId, next, database); return { ok: true as const, item }; }
+export async function updateAward(eventId: string, awardId: string, input: unknown, database: Database = getDb()) { const current = await getAwards(eventId, database); if (!current) return { ok: false as const, code: "EVENT_NOT_FOUND" }; const existing = current.awards.items.find((item) => item.id === awardId); if (!existing) return { ok: false as const, code: "AWARD_NOT_FOUND" }; const item = awardItemSchema.parse({ ...(input as Record<string, unknown>), id: awardId, displayOrder: existing.displayOrder }); const next = { ...current.awards, items: current.awards.items.map((entry) => entry.id === awardId ? item : entry) }; await saveAwards(eventId, next, database); return { ok: true as const, item }; }
+export async function deleteAward(eventId: string, awardId: string, database: Database = getDb()) { const current = await getAwards(eventId, database); if (!current) return { ok: false as const, code: "EVENT_NOT_FOUND" }; if (!current.awards.items.some((item) => item.id === awardId)) return { ok: false as const, code: "AWARD_NOT_FOUND" }; const items = current.awards.items.filter((item) => item.id !== awardId).map((item, index) => ({ ...item, displayOrder: index + 1 })); await saveAwards(eventId, { ...current.awards, items }, database); return { ok: true as const }; }
+export async function reorderAwards(eventId: string, orderedIds: string[], database: Database = getDb()) { const current = await getAwards(eventId, database); if (!current) return { ok: false as const, code: "EVENT_NOT_FOUND" }; const byId = new Map(current.awards.items.map((item) => [item.id, item])); if (orderedIds.length !== byId.size || orderedIds.some((id) => !byId.has(id))) return { ok: false as const, code: "INVALID_ORDER" }; const items = orderedIds.map((id, index) => ({ ...byId.get(id)!, displayOrder: index + 1 })); await saveAwards(eventId, { ...current.awards, items }, database); return { ok: true as const, items }; }

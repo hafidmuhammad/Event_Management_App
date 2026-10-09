@@ -1,0 +1,27 @@
+import "@/lib/load-env";
+import mysql from "mysql2/promise";
+import { drizzle } from "drizzle-orm/mysql2";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { eq, inArray } from "drizzle-orm";
+import * as schema from "@/db/schema";
+import { emailTemplates, events, participants, users } from "@/db/schema";
+import { broadcastTemplate, resolveRecipients } from "./email";
+const url = process.env.TEST_DATABASE_URL;
+process.env.MAIL_TRANSPORT = "preview";
+describe.skipIf(!url).sequential("email management MySQL rules", () => { const pool = url ? mysql.createPool(url) : null; const db = pool ? drizzle(pool, { schema, mode: "default" }) : null; const ids = { user: crypto.randomUUID(), eventA: crypto.randomUUID(), eventB: crypto.randomUUID() };
+ beforeAll(async () => { if (!db) return; await db.insert(users).values({ id: ids.user, name: "Email Admin", email: `${ids.user}@test.local`, passwordHash: "test", role: "ADMIN", status: "ACTIVE" }); await db.insert(events).values([{ id: ids.eventA, name: "Email A", status: "PUBLISHED", createdBy: ids.user }, { id: ids.eventB, name: "Email B", status: "PUBLISHED", createdBy: ids.user }]); await db.insert(participants).values([{ id: crypto.randomUUID(), eventId: ids.eventA, name: "Approved A", phone: "0811", email: `approved-${ids.eventA}@test.local`, status: "APPROVED" }, { id: crypto.randomUUID(), eventId: ids.eventA, name: "Pending A", phone: "0812", email: `pending-${ids.eventA}@test.local`, status: "PENDING" }, { id: crypto.randomUUID(), eventId: ids.eventB, name: "Approved B", phone: "0813", email: `approved-${ids.eventB}@test.local`, status: "APPROVED" }]); });
+ afterAll(async () => { if (!db || !pool) return; await db.delete(emailTemplates).where(inArray(emailTemplates.eventId, [ids.eventA, ids.eventB])); await db.delete(participants).where(inArray(participants.eventId, [ids.eventA, ids.eventB])); await db.delete(events).where(inArray(events.id, [ids.eventA, ids.eventB])); await db.delete(users).where(eq(users.id, ids.user)); await pool.end(); });
+ it("resolves recipients only inside the current event", async () => { if (!db) return; const result = await resolveRecipients(ids.eventA, { to: { type: "APPROVED", emails: [] }, cc: [], bcc: [] }, db); expect(result.to).toEqual([`approved-${ids.eventA}@test.local`]); });
+ it("blocks draft broadcast and cannot load another event's template", async () => {
+   if (!db) return;
+   const id = crypto.randomUUID();
+   await db.insert(emailTemplates).values({ id, eventId: ids.eventA, name: "[DRAFT] Protected", type: "CUSTOM", subject: "Draft", recipientJson: { to: { type: "CUSTOM", emails: ["custom@example.local"] }, cc: [], bcc: [] }, contentJson: { version: 1, deliveryStatus: "DRAFT", blocks: [] } });
+   const blocked = await broadcastTemplate(ids.eventA, id, db);
+   expect(blocked.sent).toBe(0);
+   expect(blocked.errors[0]).toContain("Draft templates cannot be broadcast");
+   const isolated = await broadcastTemplate(ids.eventB, id, db);
+   expect(isolated.sent).toBe(0);
+   expect(isolated.errors).toEqual(["Template not found."]);
+ });
+ it("broadcasts a custom audience with development previews", async () => { if (!db) return; const id = crypto.randomUUID(); await db.insert(emailTemplates).values({ id, eventId: ids.eventA, name: "Custom", type: "CUSTOM", subject: "Hello {{event.name}}", recipientJson: { to: { type: "CUSTOM", emails: ["custom@example.local"] }, cc: [], bcc: [] }, contentJson: { version: 1, blocks: [{ id: "p", type: "paragraph", data: { text: "Hi {{participant.email}}", align: "left" } }] } }); const result = await broadcastTemplate(ids.eventA, id, db); expect(result).toMatchObject({ requested: 1, sent: 1, failed: 0 }); });
+});

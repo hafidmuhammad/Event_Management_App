@@ -1,0 +1,11 @@
+import "next-auth";
+import "next-auth/jwt";
+
+declare module "next-auth" {
+  interface User { role: "ADMIN" | "EVENT_MANAGER" | "RECEPTIONIST"; }
+  interface Session { user: { id: string; role: "ADMIN" | "EVENT_MANAGER" | "RECEPTIONIST" } & DefaultSession["user"]; }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT { id?: string; role?: "ADMIN" | "EVENT_MANAGER" | "RECEPTIONIST"; }
+}

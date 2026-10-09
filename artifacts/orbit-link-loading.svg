@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+  <title id="title">CDP Events — Orbit Link loading</title>
+  <desc id="desc">Dua bingkai kalender bertaut dengan orbit biru bergerak dan centang yang muncul berulang.</desc>
+  <defs>
+    <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ffffff"/><stop offset=".5" stop-color="#cad2de"/><stop offset="1" stop-color="#7e8d9f"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#159aff"/><stop offset="1" stop-color="#0342db"/>
+    </linearGradient>
+    <linearGradient id="ribbon" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#b4e5ff"/><stop offset=".4" stop-color="#168fff"/><stop offset="1" stop-color="#0750e8"/>
+    </linearGradient>
+  </defs>
+  <style>
+    .orbit{transform-origin:160px 160px;animation:orbit 2.8s linear infinite}
+    .core{animation:pulse 2.8s ease-in-out infinite}
+    .check{stroke-dasharray:100;stroke-dashoffset:100;animation:check 2.8s ease-in-out infinite}
+    @keyframes orbit{to{transform:rotate(360deg)}}
+    @keyframes pulse{0%,100%{opacity:.65}55%,85%{opacity:1}}
+    @keyframes check{0%,42%{stroke-dashoffset:100;opacity:0}48%{opacity:1}70%,88%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+    @media(prefers-reduced-motion:reduce){.orbit,.core,.check{animation:none}.check{stroke-dashoffset:0}}
+  </style>
+  <g class="orbit">
+    <ellipse cx="160" cy="160" rx="140" ry="116" fill="none" stroke="#167bff" stroke-width="3" opacity=".22"/>
+    <path d="M 38 103 A 140 116 0 0 1 270 90" fill="none" stroke="url(#ribbon)" stroke-width="13" stroke-linecap="round"/>
+    <circle cx="270" cy="90" r="7" fill="#6ac7ff"/>
+  </g>
+  <rect x="75" y="84" width="140" height="142" rx="14" fill="none" stroke="#112d4b" stroke-width="25"/>
+  <rect x="75" y="84" width="140" height="142" rx="14" fill="none" stroke="url(#silver)" stroke-width="20"/>
+  <g fill="url(#silver)" stroke="#112d4b" stroke-width="3">
+    <rect x="94" y="54" width="19" height="42" rx="5"/>
+    <rect x="177" y="54" width="19" height="42" rx="5"/>
+  </g>
+  <rect class="core" x="132" y="141" width="89" height="89" rx="10" fill="url(#blue)"/>
+  <rect x="118" y="127" width="118" height="118" rx="13" fill="none" stroke="#112d4b" stroke-width="25"/>
+  <rect x="118" y="127" width="118" height="118" rx="13" fill="none" stroke="url(#silver)" stroke-width="20"/>
+  <path class="check" d="m 153 187 18 18 33-38" fill="none" stroke="white" stroke-width="12" stroke-linecap="square" stroke-linejoin="miter"/>
+  <g class="orbit" fill="none">
+    <path d="M 282 217 A 140 116 0 0 1 50 230" stroke="url(#ribbon)" stroke-width="13" stroke-linecap="round"/>
+  </g>
+</svg>

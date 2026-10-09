@@ -1,0 +1,12 @@
+import { ModalTrigger } from "@/components/ui/modal";
+import { formatEventDate } from "@/lib/date-time";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireRole } from "@/lib/auth/authorization";
+import { getEvent } from "@/services/events";
+import { listTickets } from "@/services/tickets";
+import { badgeVariants } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { Table } from "@/components/ui/table";
+function status(status: string) { return badgeVariants({ variant: status === "ACTIVE" ? "positive" : status === "USED" ? "neutral" : "warning" }); }
+export default async function TicketsPage({ params }: { params: Promise<{ eventId: string }> }) { await requireRole("ADMIN", "EVENT_MANAGER", "RECEPTIONIST"); const { eventId } = await params; const [event, rows] = await Promise.all([getEvent(eventId), listTickets(eventId)]); if (!event) notFound(); return <section className="space-y-4"><div><p className="eyebrow">{event.name} / Tickets</p><h1 className="page-title">Issued tickets</h1><p className="page-subtitle">QR-ready tickets for approved participants.</p></div><Table responsive><thead><tr><th>Ticket</th><th>Participant</th><th>Company</th><th>Status</th><th>Validity</th><th>Action</th></tr></thead><tbody>{rows.map(({ ticket, participant }) => <tr key={ticket.id}><td data-label="Ticket" className="font-mono text-xs">{ticket.ticketNumber}</td><td data-label="Participant">{participant.name}</td><td data-label="Company">{participant.company ?? "—"}</td><td data-label="Status"><span className={status(ticket.status)}>{ticket.status}</span></td><td data-label="Validity" className="text-xs">{formatEventDate(ticket.validFrom)} – {formatEventDate(ticket.validUntil)}</td><td data-label="Action"><ModalTrigger title="View ticket" triggerClass={buttonVariants({ variant: "outline", size: "sm" })} size="max-w-3xl"><iframe title={`Ticket for ${participant.name}`} src={`/t/${ticket.qrToken}`} className="h-[70dvh] w-full rounded-md border border-outline" /></ModalTrigger></td></tr>)}{!rows.length && <tr><td colSpan={6} className="py-10 text-center text-ink-muted">No tickets issued yet.<p className="mt-2 text-xs">Tickets are generated when a registration is approved.</p><Link className={`${buttonVariants({ variant: "outline" })} mt-3`} href={`/events/${eventId}/participants?status=PENDING`}>Review registrations</Link></td></tr>}</tbody></Table></section>; }

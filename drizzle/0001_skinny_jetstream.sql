@@ -1,0 +1,2 @@
+ALTER TABLE `participants` ADD CONSTRAINT `participants_event_email_unique` UNIQUE(`event_id`,`email`);--> statement-breakpoint
+ALTER TABLE `participants` ADD CONSTRAINT `participants_event_phone_unique` UNIQUE(`event_id`,`phone`);
