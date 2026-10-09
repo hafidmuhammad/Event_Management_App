@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Event Management MVP
 
 Event Management MVP berbasis Next.js App Router, TypeScript, Tailwind, MySQL, Drizzle, dan Auth.js Credentials.
@@ -39,3 +40,6 @@ npm.cmd run build
 Migration test harus dijalankan terhadap `TEST_DATABASE_URL` sebelum integration test. Email default-nya hanya membuat preview HTML lokal di `.email-previews/`. Untuk mengirim melalui Office 365, isi kredensial mailbox di `.env.local` dan ubah `MAIL_TRANSPORT=smtp`; aplikasi menggunakan STARTTLS ke `smtp.office365.com:587`. `SMTP_FROM` opsional dan default ke `SMTP_USER`. Restart server setelah mengubah environment.
 
 Mailbox dan tenant Microsoft 365 harus mengizinkan SMTP AUTH. Jika tenant mewajibkan MFA atau menonaktifkan SMTP AUTH/basic authentication, username dan password biasa tidak akan berhasil; administrator Microsoft 365 perlu mengizinkan SMTP AUTH atau aplikasi harus dikonfigurasi dengan OAuth 2.0. Jangan commit file environment atau memasukkan kredensial ke source code.
+=======
+# Event_Management_App
+>>>>>>> bb483894b1210af3c0a47b9c754e62824d1d690f
